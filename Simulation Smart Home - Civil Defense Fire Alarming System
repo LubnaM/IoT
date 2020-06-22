@@ -1,0 +1,116 @@
+/* Updated by 
+Lubna Abu Zohair
+June 22nd, 2020
+*/
+
+/* HOME Fire Alarm - Centralized */
+
+//This program is a demonstration of WiFi Web client usage
+//Arduino will sense if home temprature is high and will use Wifi as client to connect to  
+// area's defence server (lets say its youtube.com) informing about the temprature and the suspection of flame
+//which from its end ( as if ) will run the buzzer in that home as an alert to free home until they will come. 
+
+
+#include <SoftwareSerial.h>
+
+//first of all we will use the  TMP36 which is a temperature sensor that outputs
+//a voltage that's proportional to the ambient temperature.
+
+// We'll use analog input 0 to measure the temperature sensor's
+// signal pin.
+const int temperaturePin = 0; //the declaration of the variable
+int buzzer = 12; 
+
+// Error LED - used to show errors in comunicating with wifi sheild or host server
+int errorLED = 11;
+
+// WiFi SSID & Password
+String ssid     = "Simulator Wifi";	// SSID to connect to
+String password = ""; // Our virtual wifi has no password (so dont do your banking stuff on this network)
+
+// Host & page setup
+String host     = "www.youtube.com"; // Open Weather Map API
+const int httpPort   = 80;
+String uri		 = "/index.html";
+
+
+void setup()
+{
+  
+  // init our red error LED
+  pinMode(errorLED, OUTPUT); 
+
+  //we will connect the buzzer to D12 on the arduino
+  pinMode(buzzer, OUTPUT);
+//set the pin connected to the buzzer as an output
+  
+  // Start/setup/test ESP8266 Serial Communication
+  Serial.begin(115200);		// Serial connection over USB to computer
+  Serial.println("AT");		// Serial connection on Tx / Rx port to ESP8266
+  delay(10);				// Wait a little for the ESP to respond
+
+  if (!Serial.find("OK")) digitalWrite(errorLED, HIGH);	// check if the ESP is running well
+
+  // Connect to 123D Circuits Simulator Wifi
+  Serial.println("AT+CWJAP=\"" + ssid + "\",\"" + password + "\"");
+  delay(10);				// Wait a little for the ESP to respond
+  
+  if (!Serial.find("OK")) digitalWrite(errorLED, HIGH);	// check if the ESP is running well
+	
+  // Open TCP connection to the host:
+  Serial.println("AT+CIPSTART=\"TCP\",\"" + host + "\"," + httpPort);
+  delay(50);				// Wait a little for the ESP to respond
+ 
+  if (!Serial.find("OK")) digitalWrite(errorLED, HIGH);	// check if the ESP is running well
+
+}
+
+
+void loop()
+{
+
+  	// Construct our HTTP call
+  	String httpPacket = "GET " + uri + " HTTP/1.1\r\nHost: " + host + "\r\n\r\n";
+  	int length = httpPacket.length();
+  
+  
+  	//temp sensor init and calc.
+  	float voltage, degreesC;
+    voltage = getVoltage(temperaturePin);
+    degreesC = (voltage - 0.5) * 100.0;
+
+    if(degreesC>37)
+     {
+               // Send our message length
+           Serial.print("AT+CIPSEND=");
+           Serial.println(length);
+
+          delay(10); // Wait a little for the ESP to respond
+
+          if (!Serial.find(">")) digitalWrite(errorLED, HIGH); // check if the ESP is running well
+
+          // Send our http request
+          Serial.print(httpPacket);
+          delay(10); // Wait a little for the ESP to respond
+          if (!Serial.find("SEND OK\r\n")) digitalWrite(errorLED, HIGH); // check if the ESP is running well
+
+          delay(10);	// wait until we receive the response from the server
+
+        //serial.find() reads data from the serial buffer
+          if (Serial.find("\r\n\r\n"))
+          {	// search for a blank line which defines the end of the http header
+
+                digitalWrite(buzzer, HIGH);
+                delay(500);
+                tone(12, 10000, 100);
+            }
+
+      }
+      delay(1000);	// wait 1  seconds before updating  
+}
+ 
+float getVoltage(int pin)
+{
+  
+  return (analogRead(pin) * 0.004882814);
+}
