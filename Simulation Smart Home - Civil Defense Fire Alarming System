@@ -10,7 +10,7 @@ June 22nd, 2020
 
 //This program is a demonstration of WiFi Web client usage
 //Arduino will sense if home temprature is high and will use Wifi as client to connect to  
-// area's defence server (lets say its youtube.com) informing about the temprature and the suspection of flame
+// area's defense server (lets say its youtube.com) informing about the temprature and the suspection of flame
 //which from its end ( as if ) will run the buzzer in that home as an alert to free home until they will come. 
 
 
